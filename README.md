@@ -1,3 +1,8 @@
+# unraid
+
+This is a project for several scripts I use for "scripts" that I run on my home
+NAS. This NAS is running [unraid](https://unraid.net/), so it names a project.
+
 # git-mirror
 
 This projects helps to synchronize git repositories and maintain a local

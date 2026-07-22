@@ -1,0 +1,5 @@
+[tools]
+uv = "latest"
+"pipx:basedpyright" = "latest"
+"github:astral-sh/ruff" = "latest"
+"github:facebook/pyrefly" = "latest"
