@@ -65,8 +65,8 @@ For example:
 * `MIRROR_DOTFILES_SCHEDULE = "0 * * * * *"`
 """  # noqa: E501
 
-PATH_ARCHIVES: t.Final = pathlib.Path("./archives")
-PATH_WORK: t.Final = pathlib.Path("./work")
+PATH_ARCHIVES: t.Final = pathlib.Path("/archives")
+PATH_WORK: t.Final = pathlib.Path("/work")
 
 LOG: t.Final = logging.getLogger(__name__)
 
