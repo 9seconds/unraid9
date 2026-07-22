@@ -3,3 +3,10 @@ uv = "latest"
 "pipx:basedpyright" = "latest"
 "github:astral-sh/ruff" = "latest"
 "github:facebook/pyrefly" = "latest"
+
+[tasks.build]
+description = "Build a project"
+run = [
+    "docker build --pull --force-rm --tag unraid9 .",
+    "docker save -o unraid9.tar.gz unraid9:latest",
+]

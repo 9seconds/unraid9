@@ -1,2 +1,4 @@
-.python-version
-.venv
+/.python-version
+/.venv
+/.ruff-cache
+/unraid9.tar.gz
