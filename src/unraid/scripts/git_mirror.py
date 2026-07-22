@@ -109,10 +109,10 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
             url_to_validate = f"ssh://{url_to_validate}"
         validators.url(url_to_validate)
 
-        archive_name = settings.get(
-            group, "archive", default=pathlib.Path(url).with_suffix("").name
+        stem = settings.get(
+            group, "stem", default=pathlib.Path(url).with_suffix("").name
         )
-        validators.slug(archive_name)
+        validators.slug(stem)
 
         schedule = croniter.croniter(
             settings.get(group, "schedule", default="R R * * *")
@@ -120,8 +120,8 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
 
         threads.append(
             threading.Thread(
-                target=process, args=(git_exec, url, archive_name, schedule)
-            )
+                target=process, args=(git_exec, url, stem, schedule),
+            ),
         )
 
     for sig in signal.SIGINT, signal.SIGTERM:
@@ -137,10 +137,10 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
 def process(
     git_func: GitCallable,
     url: str,
-    archive_name: str,
+    stem: str,
     schedule: croniter.croniter,
 ) -> None:
-    work_path = PATH_WORK / archive_name
+    work_path = PATH_WORK / stem
 
     while True:
         next_execution = schedule.get_next(ret_type=datetime.datetime)
@@ -153,26 +153,38 @@ def process(
         with contextlib.suppress(subprocess.CalledProcessError):
             if not work_path.exists():
                 git_func(
-                    "clone", "--quiet", "--mirror", "--tags", url, work_path
+                    "clone", "--quiet", "--mirror", "--tags", url, work_path,
                 )
 
             git_func = functools.partial(git_func, "--git-dir", work_path)
             git_func("remote", "update", "--prune")
             git_func("gc", "--auto", "--aggressive", "--quiet")
 
-            cmd.cmd_exec(
-                "tar",
-                "-cJ",
-                "-f",
-                PATH_ARCHIVES.joinpath(archive_name).with_suffix(".tar.xz"),
-                "-C",
-                work_path,
-                ".",
-                env={"XZ_OPT": "-9 -T 0"},
+            save_to = PATH_ARCHIVES.joinpath(stem).with_suffix(".tar.xz")
+            tmp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+                dir=save_to.parent,
+                prefix=save_to.name,
+                delete=False,
             )
+            tmp_file_path = pathlib.Path(tmp_file.name)
+
+            try:
+                cmd.cmd_exec(
+                    "tar",
+                    "-cJ",
+                    "-f",
+                    tmp_file_path,
+                    "-C",
+                    work_path,
+                    ".",
+                    env={"XZ_OPT": "-9 -T 0"},
+                )
+                tmp_file_path.rename(save_to)
+            finally:
+                tmp_file_path.unlink(missing_ok=True)
 
 
-def signal_stop(signum: int, frame: t.Any) -> None:  # noqa: ANN401, ARG001
+def signal_stop(signum: int, _: t.Any) -> None:  # noqa: ANN401
     signame = signal.Signals(signum).name
     LOG.info("Caught %s", signame)
     EVT_STOP.set()

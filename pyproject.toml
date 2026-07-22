@@ -90,6 +90,9 @@ select = [
     # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
     "RUF"
 ]
+ignore = [
+    "COM812"
+]
 
 [tool.ruff.lint.pycodestyle]
 max-doc-length = 120
