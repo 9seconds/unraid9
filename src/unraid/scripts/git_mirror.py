@@ -160,16 +160,16 @@ def process(
             git_func("remote", "update", "--prune")
             git_func("gc", "--auto", "--aggressive", "--quiet")
 
-        cmd.cmd_exec(
-            "tar",
-            "-cJ",
-            "-f",
-            PATH_ARCHIVES.joinpath(archive_name).with_suffix(".tar.xz"),
-            "-C",
-            work_path,
-            ".",
-            env={"XZ_OPT": "-9 -T 0"},
-        )
+            cmd.cmd_exec(
+                "tar",
+                "-cJ",
+                "-f",
+                PATH_ARCHIVES.joinpath(archive_name).with_suffix(".tar.xz"),
+                "-C",
+                work_path,
+                ".",
+                env={"XZ_OPT": "-9 -T 0"},
+            )
 
 
 def signal_stop(signum: int, frame: t.Any) -> None:  # noqa: ANN401, ARG001
