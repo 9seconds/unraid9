@@ -57,42 +57,57 @@ EVT_STOP: t.Final = threading.Event()
 DOC: t.Final = """
 This command mirrors git repositories.
 
-This script is configured by environment variables masked as `MIRROR_*_{URL,SCHEDULE,ARCHIVE}`.
-For example:
+This script is configured by environment variables masked as
+`SETTING__*__{URL,SCHEDULE,ARCHIVE}`. For example:
 
-* `MIRROR_DOTFILES_URL = git@github.com/9seconds/dotfiles.git`
-* `MIRROR_DOTFILES_ARCHIVE = dotfiles`
-* `MIRROR_DOTFILES_SCHEDULE = "0 * * * * *"`
-"""  # noqa: E501
+* `SETTING__DOTFILES__URL = git@github.com/9seconds/dotfiles.git`
+* `SETTING__DOTFILES__STEM = dotfiles`
+* `SETTING__DOTFILES__SCHEDULE = "0 * * * * *"`
 
-PATH_ARCHIVES: t.Final = pathlib.Path("/archives")
-PATH_WORK: t.Final = pathlib.Path("/work")
+Also, there are path directories:
+
+* `SETTING__WORK_DIR = /work`
+* `SETTING__ARCHIVES_DIR = /archives`
+* `SETTING__SSH_PRIVATE_KEY = ...`
+"""
 
 LOG: t.Final = logging.getLogger(__name__)
 
 
 @cli.main(DOC)
 def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
-    PATH_WORK.mkdir(exist_ok=True, parents=True)
-    PATH_ARCHIVES.mkdir(exist_ok=True, parents=True)
-
-    private_key = settings.get("setting_sshkey").strip()
+    private_key = settings.get("ssh_private_key").strip()
     if not private_key:
         raise ValueError("Private key must be defined")
 
-    with tempfile.NamedTemporaryFile(delete=False) as fp:
-        fp.write(base64.standard_b64decode(private_key.encode()))
+    fd, path_ = tempfile.mkstemp()
+    os.write(fd, base64.standard_b64decode(private_key.encode()))
+    os.close(fd)
 
-    ssh_private_key_path = pathlib.Path(fp.name).absolute()
+    ssh_private_key_path = pathlib.Path(path_)
     ssh_private_key_path.chmod(0o400)
-    estack.callback(ssh_private_key_path.unlink)
+    estack.callback(ssh_private_key_path.unlink, missing_ok=True)
+
+    work_dir = pathlib.Path(settings.get("work_dir", default="/work"))
+    work_dir.mkdir(exist_ok=True, parents=True)
+
+    archives_dir = pathlib.Path(
+        settings.get("archives_dir", default="/archives")
+    )
+    archives_dir.mkdir(exist_ok=True, parents=True)
 
     git_exec = functools.partial(
         cmd.cmd_exec,
         "git",
         env={
             "GIT_SSH_COMMAND": subprocess.list2cmdline(
-                ["ssh", "-i", os.fspath(ssh_private_key_path)]
+                [
+                    "ssh",
+                    "-i",
+                    os.fspath(ssh_private_key_path),
+                    "-o",
+                    "StrictHostKeyChecking=accept-new",
+                ]
             )
         },
     )
@@ -114,14 +129,21 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
         )
         validators.slug(stem)
 
-        schedule = croniter.croniter(
-            settings.get(group, "schedule", default="R R * * *")
-        )
-
         threads.append(
             threading.Thread(
-                target=process, args=(git_exec, url, stem, schedule),
-            ),
+                target=process_url,
+                kwargs={
+                    "git_exec": git_exec,
+                    "url": url,
+                    "work_path": work_dir / stem,
+                    "archives_path": archives_dir.joinpath(stem).with_suffix(
+                        "tar.xz"
+                    ),
+                    "schedule": croniter.croniter(
+                        settings.get(group, "schedule", default="R R * * *")
+                    ),
+                },
+            )
         )
 
     for sig in signal.SIGINT, signal.SIGTERM:
@@ -134,14 +156,14 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
         th.join()
 
 
-def process(
-    git_func: GitCallable,
+def process_url(
+    *,
     url: str,
-    stem: str,
+    work_path: pathlib.Path,
+    archive_path: pathlib.Path,
     schedule: croniter.croniter,
+    git_exec: GitCallable,
 ) -> None:
-    work_path = PATH_WORK / stem
-
     while True:
         next_execution = schedule.get_next(ret_type=datetime.datetime)
         LOG.info("Process %s (to %s) at %s", url, work_path, next_execution)
@@ -150,38 +172,52 @@ def process(
         if EVT_STOP.wait(to_sleep):
             return
 
-        with contextlib.suppress(subprocess.CalledProcessError):
-            if not work_path.exists():
-                git_func(
-                    "clone", "--quiet", "--mirror", "--tags", url, work_path,
-                )
-
-            git_func = functools.partial(git_func, "--git-dir", work_path)
-            git_func("remote", "update", "--prune")
-            git_func("gc", "--auto", "--aggressive", "--quiet")
-
-            save_to = PATH_ARCHIVES.joinpath(stem).with_suffix(".tar.xz")
-            tmp_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
-                dir=save_to.parent,
-                prefix=save_to.name,
-                delete=False,
+        with contextlib.ExitStack() as estack:
+            create_archive(
+                url=url,
+                work_path=work_path,
+                archive_path=archive_path,
+                estack=estack,
+                git_exec=git_exec,
             )
-            tmp_file_path = pathlib.Path(tmp_file.name)
 
-            try:
-                cmd.cmd_exec(
-                    "tar",
-                    "-cJ",
-                    "-f",
-                    tmp_file_path,
-                    "-C",
-                    work_path,
-                    ".",
-                    env={"XZ_OPT": "-9 -T 0"},
-                )
-                tmp_file_path.rename(save_to)
-            finally:
-                tmp_file_path.unlink(missing_ok=True)
+
+def create_archive(
+    *,
+    url: str,
+    work_path: pathlib.Path,
+    archive_path: pathlib.Path,
+    estack: contextlib.ExitStack,
+    git_exec: GitCallable,
+) -> None:
+    estack.enter_context(contextlib.suppress(subprocess.CalledProcessError))
+
+    if not work_path.exists():
+        git_exec("clone", "--quiet", "--mirror", "--tags", url, work_path)
+    else:
+        git_exec = functools.partial(git_exec, "--git-dir", work_path)
+        git_exec("remote", "update", "--prune")
+        git_exec("gc", "--auto", "--aggressive", "--quiet")
+
+    fd, path_ = tempfile.mkstemp(
+        dir=archive_path.parent, prefix=f".{archive_path.name}."
+    )
+    os.close(fd)
+
+    tmp_path = pathlib.Path(path_)
+    estack.callback(tmp_path.unlink, missing_ok=True)
+
+    cmd.cmd_exec(
+        "tar",
+        "-cJ",
+        "-f",
+        tmp_path,
+        "-C",
+        work_path,
+        ".",
+        env={"XZ_OPT": "-9 -T 0"},
+    )
+    tmp_path.rename(archive_path)
 
 
 def signal_stop(signum: int, _: t.Any) -> None:  # noqa: ANN401

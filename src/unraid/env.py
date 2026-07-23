@@ -36,67 +36,52 @@ PREFIX: t.Final = "SETTING"
 
 class Env:
     _prefix: str
-    _settings: dict[str, "SettingsDictT"]
-    _env: dict[str, str]
+    _data: dict[str, "SettingsDictT"]
 
     def __init__(
-        self, prefix: str = PREFIX, *, data: None | dict[str, str] = None
+        self, prefix: str = PREFIX, *, data: dict[str, str] | None = None
     ) -> None:
         if data is None:
             data = os.environ
 
         self._prefix = prefix.casefold()
-        self._env = {}
-        self._settings = {}
+        self._data = {}
 
         for key, value in data.items():
             key = key.casefold()
-            self._env[key] = value
 
             match re.split(r"_{2,}", key):
-                case [fst, *rst, lst] if fst.casefold() == self._prefix and rst:
-                    current = self._settings
+                case [self._prefix, *rst, lst]:
+                    current = self._data
                     while rst:
                         current = current.setdefault(rst[0], {})
                         rst = rst[1:]
                     current[lst] = value
 
-    def settings_keys(self) -> t.Iterator[str]:
-        return iter(self._settings)
+    def get(self, path: str, *paths: str, default: str = "") -> str:
+        current = self._data[path.casefold()]
+        rv = ""
 
-    def all_keys(self) -> t.Iterator[tuple[str, ...]]:
-        def rec_iter(dct: SettingsDictT) -> t.Iterator[tuple[str, ...]]:
-            if isinstance(dct, dict):
-                for key, value in dct.items():
-                    for subkey in rec_iter(value):
-                        yield (key, *subkey)
+        if paths:
+            for elem in paths[1:]:
+                current = current[elem.casefold()]
+            rv = current.get(paths[-1], default)
 
-        for key in rec_iter(self._settings):
-            yield (self._prefix, *key)
-        for key in self._env:
-            yield (key,)
+        if not isinstance(rv, str):
+            raise KeyError("Umbigous path")
 
-    def __repr__(self) -> str:
-        return repr(
-            {
-                "prefix": self._prefix,
-                "settings": self._settings,
-                # "env": self._env,
-            }
-        )
+        return rv
 
-    def get(self, *path: str, default: str = "") -> str:
-        match len(path):
-            case 0:
-                raise ValueError("Empty path is forbidden")
-            case 1:
-                return self._env.get(path[0], default)
+    def __iter__(self) -> t.Iterator[tuple[str, ...]]:
+        def rec_iter(value: SettingsDictT) -> t.Iterator[list[str]]:
+            if isinstance(value, str):
+                yield ()
+            else:
+                yield from (
+                    [k, *subkey]
+                    for k, v in value.items()
+                    for subkey in rec_iter(v)
+                )
 
-        current = self._settings
-        try:
-            for elem in path[:-1]:
-                current = current[elem]
-            return current.get(path[-1], default)
-        except Exception as exc:
-            key = [self._prefix, *path]
-            raise KeyError(f"Cannot get a key {'__'.join(key)}") from exc
+        for elem in rec_iter(self._data):
+            yield tuple(elem)
