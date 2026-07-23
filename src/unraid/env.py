@@ -58,15 +58,22 @@ class Env:
                         rst = rst[1:]
                     current[lst] = value
 
+    def __repr__(self) -> str:
+        return repr({"prefix": self._prefix, "data": self._data})
+
     def get(self, path: str, *paths: str, default: str = "") -> str:
-        current = self._data[path.casefold()]
-        rv = ""
+        try:
+            return self._get([path, *paths], default)
+        except Exception as exc:
+            key = "__".join([self._prefix, path, *paths]).upper()
+            raise KeyError(f"No {key} is defined") from exc
 
-        if paths:
-            for elem in paths[1:]:
-                current = current[elem.casefold()]
-            rv = current.get(paths[-1], default)
+    def _get(self, path: list[str], default: str = "") -> str:
+        current = self._data
+        for pth in path[:-1]:
+            current = current[pth]
 
+        rv = current.get(path[-1], default)
         if not isinstance(rv, str):
             raise KeyError("Umbigous path")
 

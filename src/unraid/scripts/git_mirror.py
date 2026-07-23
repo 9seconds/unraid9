@@ -114,15 +114,12 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
 
     threads: list[threading.Thread] = []
 
-    for group in settings.settings_keys():
+    for group in {k[0] for k in settings if len(k) > 1 and k[1] == "url"}:
         url = settings.get(group, "url")
-        if not url:
-            raise ValueError(f"{group}: url must be defined")
-
-        url_to_validate = url
-        if url_to_validate.startswith("git@"):
-            url_to_validate = f"ssh://{url_to_validate}"
-        validators.url(url_to_validate)
+        if url.startswith("git@"):
+            validators.url(f"ssh://{url}")
+        else:
+            validators.url(url)
 
         stem = settings.get(
             group, "stem", default=pathlib.Path(url).with_suffix("").name
@@ -136,8 +133,8 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
                     "git_exec": git_exec,
                     "url": url,
                     "work_path": work_dir / stem,
-                    "archives_path": archives_dir.joinpath(stem).with_suffix(
-                        "tar.xz"
+                    "archive_path": archives_dir.joinpath(stem).with_suffix(
+                        ".tar.xz"
                     ),
                     "schedule": croniter.croniter(
                         settings.get(group, "schedule", default="R R * * *")

@@ -6,6 +6,7 @@ ENV UV_NO_DEV=1
 RUN apk --no-cache add \
         git \
         openssh \
+        tar \
         xz
 
 COPY . /app
