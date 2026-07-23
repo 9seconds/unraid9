@@ -14,8 +14,12 @@ authors = [
 ]
 
 dependencies = [
+    # required by git-mirror
     "croniter ~= 6.2.4",
     "validators ~= 0.35.0",
+
+    # required by yt-audio
+    "yt-dlp[pin,pin-deno,pin-curl-cffi,pin-secretstorage] ~= 2026.7.4",
 ]
 
 [project.scripts]
