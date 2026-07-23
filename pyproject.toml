@@ -3,7 +3,7 @@ requires = ["uv_build>=0.11.29,<0.12"]
 build-backend = "uv_build"
 
 [project]
-name = "unraid"
+name = "unraid9"
 version = "0.1.0"
 description = "Different unraid scripts"
 requires-python = ">=3.14"
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-git-mirror = "unraid.scripts.git_mirror:main"
+git-mirror = "unraid9.scripts.git_mirror:main"
 
 
 [tool.ruff]
