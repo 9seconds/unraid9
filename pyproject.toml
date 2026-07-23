@@ -24,7 +24,7 @@ dependencies = [
 
 [project.scripts]
 git-mirror = "unraid9.scripts.git_mirror:main"
-
+yt-audio = "unraid9.scripts.yt_audio:main"
 
 [tool.ruff]
 line-length = 80
