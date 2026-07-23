@@ -1,4 +1,4 @@
-# unraid
+# unraid9
 
 This is a project for several scripts I use for "scripts" that I run on my home
 NAS. This NAS is running [unraid](https://unraid.net/), so it names a project.
@@ -8,24 +8,17 @@ NAS. This NAS is running [unraid](https://unraid.net/), so it names a project.
 This projects helps to synchronize git repositories and maintain a local
 mirrors. Its goal is to create an archive.
 
-| Path            | Meaning                                                    |
-| --------------- | ---------------------------------------------------------- |
-| `/repositories` | A place where to store downloaded repositories (temporary) |
-| `/archives`     | A place where to store archives of repositories            |
+This script is configured by environment variables masked as
+`SETTING__*__{URL,SCHEDULE,ARCHIVE}`. For example:
 
-This script is configured by environment variables masked as `MIRROR_*_{URL,SCHEDULE,ARCHIVE}`.
-For example:
+* `SETTING__DOTFILES__URL = git@github.com/9seconds/dotfiles.git`
+* `SETTING__DOTFILES__STEM = dotfiles`
+* `SETTING__DOTFILES__SCHEDULE = "0 * * * * *"`
 
-* `MIRROR_DOTFILES_URL = git@github.com/9seconds/dotfiles.git`
-* `MIRROR_DOTFILES_ARCHIVE = dotfiles`
-* `MIRROR_DOTFILES_SCHEDULE = "0 * * * * *"`
+Also, there are path directories:
 
-A middle section is just a reference to the configuration section.
-
-| Variable            | Meaning                                        | Default                        |
-| ------------------- | ---------------------------------------------- | ------------------------------ |
-| `MIRROR_*_URL`      | URL of the repository to mirror                | No default value               |
-| `MIRROR_*_ARCHIVE`  | A stem of the archive.                         | Extracted from URL             |
-| `MIRROR_*_SCHEDULE` | A crontab expression when to mirror an archive | Random hour/minutes of the day |
+* `SETTING__WORK_DIR = /work`
+* `SETTING__ARCHIVES_DIR = /archives`
+* `SETTING__SSH_PRIVATE_KEY = ...`
 
 By default it logs to stdout.

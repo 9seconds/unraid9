@@ -39,14 +39,14 @@ import typing as t
 import croniter
 import validators
 
-from unraid import cli
-from unraid import cmd
+from unraid9 import cli
+from unraid9 import cmd
 
 
 if t.TYPE_CHECKING:
     import contextlib
 
-    from unraid import env
+    from unraid9 import env
 
     class GitCallable(t.Protocol):
         def __call__(self, *command: str) -> None: ...
