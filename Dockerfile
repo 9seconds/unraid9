@@ -5,9 +5,9 @@ ENV UV_NO_DEV=1
 
 RUN apk --no-cache add \
         git \
+        gzip \
         openssh \
-        tar \
-        xz
+        tar
 
 COPY . /app
 RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \

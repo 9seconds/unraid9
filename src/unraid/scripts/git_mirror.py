@@ -135,7 +135,7 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
                     "url": url,
                     "work_path": work_dir / stem,
                     "archive_path": archives_dir.joinpath(stem).with_suffix(
-                        ".tar.xz"
+                        ".tar.gz"
                     ),
                     "schedule": croniter.croniter(
                         settings.get(group, "schedule", default="R R * * *")
@@ -222,13 +222,12 @@ def create_archive(
 
     cmd.cmd_exec(
         "tar",
-        "-cJ",
+        "-cz",
         "-f",
         tmp_path,
         "-C",
         work_path,
-        ".",
-        env={"XZ_OPT": "-9 -T 0"},
+        "."
     )
     tmp_path.rename(archive_path)
 
