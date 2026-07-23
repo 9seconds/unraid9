@@ -30,7 +30,6 @@ import logging
 import os
 import pathlib
 import random
-import signal
 import subprocess
 import tempfile
 import threading
@@ -50,9 +49,6 @@ if t.TYPE_CHECKING:
 
     class GitCallable(t.Protocol):
         def __call__(self, *command: str) -> None: ...
-
-
-EVT_STOP: t.Final = threading.Event()
 
 
 DOC: t.Final = """
@@ -144,9 +140,6 @@ def main(estack: contextlib.ExitStack, settings: env.Env) -> None:
             )
         )
 
-    for sig in signal.SIGINT, signal.SIGTERM:
-        signal.signal(sig, signal_stop)
-
     for th in threads:
         th.start()
 
@@ -162,29 +155,11 @@ def process_url(
     schedule: croniter.croniter,
     git_exec: GitCallable,
 ) -> None:
-    first_sync = random.randint(0, 180)
-    LOG.info("Process %s (to %s) in %d seconds", url, work_path, first_sync)
+    sleep_for = random.randint(0, 180)
+    LOG.info("Process %s (to %s) in %d seconds", url, work_path, sleep_for)
 
-    if EVT_STOP.wait(first_sync):
-        return
-
-    with contextlib.ExitStack() as estack:
-        create_archive(
-            url=url,
-            work_path=work_path,
-            archive_path=archive_path,
-            estack=estack,
-            git_exec=git_exec,
-        )
-
-    while True:
+    while not cli.STOP.wait(abs(sleep_for)):
         next_execution = schedule.get_next(ret_type=datetime.datetime)
-        LOG.info("Process %s (to %s) at %s", url, work_path, next_execution)
-
-        to_sleep = (next_execution - datetime.datetime.now()).total_seconds()
-        if EVT_STOP.wait(to_sleep):
-            return
-
         with contextlib.ExitStack() as estack:
             create_archive(
                 url=url,
@@ -193,6 +168,9 @@ def process_url(
                 estack=estack,
                 git_exec=git_exec,
             )
+
+        LOG.info("Process %s (to %s) at %s", url, work_path, next_execution)
+        sleep_for = (next_execution - datetime.datetime.now()).total_seconds()
 
 
 def create_archive(
@@ -220,19 +198,5 @@ def create_archive(
     tmp_path = pathlib.Path(path_)
     estack.callback(tmp_path.unlink, missing_ok=True)
 
-    cmd.cmd_exec(
-        "tar",
-        "-cz",
-        "-f",
-        tmp_path,
-        "-C",
-        work_path,
-        "."
-    )
+    cmd.cmd_exec("tar", "-cz", "-f", tmp_path, "-C", work_path, ".")
     tmp_path.rename(archive_path)
-
-
-def signal_stop(signum: int, _: t.Any) -> None:  # noqa: ANN401
-    signame = signal.Signals(signum).name
-    LOG.info("Caught %s", signame)
-    EVT_STOP.set()

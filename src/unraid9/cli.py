@@ -26,14 +26,17 @@ import argparse
 import contextlib
 import functools
 import logging
+import signal
 import sys
 import textwrap
+import threading
 import typing as t
 
 from unraid9 import env
 
 
 LOG: t.Final = logging.getLogger(__name__)
+STOP: t.Final = threading.Event()
 
 
 def main(
@@ -82,9 +85,18 @@ def main(
             settings = env.Env(prefix)
             LOG.debug("Settings: %r", settings)
 
+            for sig in signal.SIGINT, signal.SIGTERM:
+                signal.signal(sig, signal_stop)
+
             with contextlib.ExitStack() as estack:
                 parser.parse_args().cmd(estack, settings)
 
         return inner_decorator
 
     return outer_decorator
+
+
+def signal_stop(signum: int, _: t.Any) -> None:  # noqa: ANN401
+    signame = signal.Signals(signum).name
+    LOG.info("Caught %s", signame)
+    STOP.set()
