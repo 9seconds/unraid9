@@ -29,6 +29,7 @@ import functools
 import logging
 import os
 import pathlib
+import random
 import signal
 import subprocess
 import tempfile
@@ -161,6 +162,21 @@ def process_url(
     schedule: croniter.croniter,
     git_exec: GitCallable,
 ) -> None:
+    first_sync = random.randint(0, 180)
+    LOG.info("Process %s (to %s) in %d seconds", url, work_path, first_sync)
+
+    if EVT_STOP.wait(first_sync):
+        return
+
+    with contextlib.ExitStack() as estack:
+        create_archive(
+            url=url,
+            work_path=work_path,
+            archive_path=archive_path,
+            estack=estack,
+            git_exec=git_exec,
+        )
+
     while True:
         next_execution = schedule.get_next(ret_type=datetime.datetime)
         LOG.info("Process %s (to %s) at %s", url, work_path, next_execution)
