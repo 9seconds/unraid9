@@ -26,6 +26,7 @@ import argparse
 import contextlib
 import functools
 import logging
+import sys
 import textwrap
 import typing as t
 
@@ -51,6 +52,8 @@ def main(
             logging.basicConfig(
                 format="%(asctime)s [%(levelname)s] %(message)s",
                 level=logging.DEBUG,
+                # unraid ios app expects stdout, so why not
+                stream=sys.stdout,
             )
 
             def print_usage(_s: contextlib.ExitStack, _e: env.Env) -> None:
