@@ -380,6 +380,15 @@ wheels = [
 ]
 
 [[package]]
+name = "types-croniter"
+version = "6.2.4.20260711"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c0/e1/ef8900515a103efa41b29ce81e59efb18e72bc9642139c5a3a17f6022641/types_croniter-6.2.4.20260711.tar.gz", hash = "sha256:807793e109f4e0d51ec18f6277a1a5f1d133e425ac6bee3a7c3254ab1793e0ea", size = 12164, upload-time = "2026-07-11T04:51:18.624Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/3f/896a98180a55f855bd068b97e8c99fd4ce1885a4b43f68fd7b29641084f6/types_croniter-6.2.4.20260711-py3-none-any.whl", hash = "sha256:601b68139a47fe1b2177f433132cc81fd91155f3059a49c5cb63404c389dff01", size = 9746, upload-time = "2026-07-11T04:51:17.662Z" },
+]
+
+[[package]]
 name = "unraid9"
 version = "0.1.0"
 source = { editable = "." }
@@ -389,12 +398,20 @@ dependencies = [
     { name = "yt-dlp", extra = ["pin", "pin-curl-cffi", "pin-deno", "pin-secretstorage"] },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "types-croniter" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "croniter", specifier = "~=6.2.4" },
     { name = "validators", specifier = "~=0.35.0" },
     { name = "yt-dlp", extras = ["pin", "pin-deno", "pin-curl-cffi", "pin-secretstorage"], specifier = "~=2026.7.4" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "types-croniter", specifier = "~=6.2.4" }]
 
 [[package]]
 name = "urllib3"

@@ -24,15 +24,25 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import datetime
 import functools
 import logging
+import os
+import random
 import signal
 import sys
 import textwrap
 import threading
 import typing as t
 
+import croniter
+
 from unraid9 import env
+
+
+if t.TYPE_CHECKING:
+    T = t.TypeVar("T")
+    P = t.ParamSpec("P")
 
 
 LOG: t.Final = logging.getLogger(__name__)
@@ -40,16 +50,17 @@ STOP: t.Final = threading.Event()
 
 
 def main(
-    doc: str, prefix: str = env.PREFIX
+    doc: str,
 ) -> t.Callable[
-    [t.Callable[[contextlib.ExitStack, env.Env], None]], t.Callable[[], None]
+    [t.Callable[[contextlib.ExitStack, env.EnvDict], None]],
+    t.Callable[[], None],
 ]:
     doc = doc.strip()
     doc = textwrap.dedent(doc)
 
     def outer_decorator(
-        func: t.Callable[[contextlib.ExitStack, env.Env], None],
-    ) -> t.Callable[[contextlib.ExitStack, env.Env], None]:
+        func: t.Callable[[contextlib.ExitStack, env.EnvDict], None],
+    ) -> t.Callable[[], None]:
         @functools.wraps(func)
         def inner_decorator() -> None:
             logging.basicConfig(
@@ -59,37 +70,63 @@ def main(
                 stream=sys.stdout,
             )
 
-            def print_usage(_s: contextlib.ExitStack, _e: env.Env) -> None:
-                print(doc)  # noqa: T201
-
-            parser = argparse.ArgumentParser(
+            argparse.ArgumentParser(
                 description=doc.splitlines()[0].rstrip(),
                 formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            )
-            parser.set_defaults(cmd=print_usage)
+            ).parse_args()
 
-            subcommands = parser.add_subparsers(title="Commands")
-            subcommands.add_parser(
-                "usage",
-                help="show usage",
-                description="Show usage",
-                formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            ).set_defaults(cmd=print_usage)
-            subcommands.add_parser(
-                "run",
-                help="run command",
-                description="Run command",
-                formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-            ).set_defaults(cmd=func)
+            LOG.info("--- Start")
 
-            settings = env.Env(prefix)
+            settings = env.parse(os.environ)
             LOG.debug("Settings: %r", settings)
 
             for sig in signal.SIGINT, signal.SIGTERM:
                 signal.signal(sig, signal_stop)
 
             with contextlib.ExitStack() as estack:
-                parser.parse_args().cmd(estack, settings)
+                func(estack, settings)
+
+            LOG.info("--- Stop")
+
+        return inner_decorator
+
+    return outer_decorator
+
+
+def repeat_until_stop(
+    name: str, schedule: str
+) -> t.Callable[
+    [t.Callable[t.Concatenate[contextlib.ExitStack, P], T]],
+    t.Callable[P, t.Never],
+]:
+    def now() -> datetime.datetime:
+        return datetime.datetime.now(datetime.timezone.utc)
+
+    def time_iterate() -> t.Iterator[int | float]:
+        sleep_for = random.randint(0, 180)
+        next_time = now() + datetime.timedelta(seconds=sleep_for)
+
+        LOG.info("Wait %s for %d seconds (at %s)", name, sleep_for, next_time)
+        yield sleep_for
+
+        cron = croniter.croniter(schedule, now())
+        while True:
+            next_time = cron.get_next(datetime.datetime)
+            LOG.info("Execute %s at %s", name, next_time)
+            yield (next_time - now()).total_seconds()
+
+    def outer_decorator(
+        func: t.Callable[t.Concatenate[contextlib.ExitStack, P], T],
+    ) -> t.Callable[P, t.Never]:
+        @functools.wraps(func)
+        def inner_decorator(*args: P.args, **kwargs: P.kwargs) -> t.Never:  # type: ignore[bad-return]
+            timer = time_iterate()
+            while not STOP.wait(next(timer)):
+                with (
+                    contextlib.suppress(Exception),
+                    contextlib.ExitStack() as estack,
+                ):
+                    func(estack, *args, **kwargs)
 
         return inner_decorator
 

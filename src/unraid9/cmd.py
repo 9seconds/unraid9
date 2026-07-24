@@ -28,10 +28,16 @@ import subprocess
 import typing as t
 
 
+if t.TYPE_CHECKING:
+    import pathlib
+
+
 LOG: t.Final = logging.getLogger(__name__)
 
 
-def cmd_exec(*command: str, env: dict[str, str] | None = None) -> list[str]:
+def cmd_exec(
+    *command: str | pathlib.Path, env: dict[str, str] | None = None
+) -> list[str]:
     str_cmd = subprocess.list2cmdline(command)
     env = env or {}
 

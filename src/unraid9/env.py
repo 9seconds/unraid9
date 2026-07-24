@@ -22,73 +22,16 @@
 
 from __future__ import annotations
 
-import os
 import re
 import typing as t
 
 
 if t.TYPE_CHECKING:
-    SettingsDictT = str | dict[str, "SettingsDictT"]
+    import collections.abc
+
+    EnvKey = tuple[str, ...]
+    EnvDict = dict[EnvKey, str]
 
 
-PREFIX: t.Final = "SETTING"
-
-
-class Env:
-    _prefix: str
-    _data: dict[str, "SettingsDictT"]
-
-    def __init__(
-        self, prefix: str = PREFIX, *, data: dict[str, str] | None = None
-    ) -> None:
-        if data is None:
-            data = os.environ
-
-        self._prefix = prefix.casefold()
-        self._data = {}
-
-        for key, value in data.items():
-            key = key.casefold()
-
-            match re.split(r"_{2,}", key):
-                case [self._prefix, *rst, lst]:
-                    current = self._data
-                    while rst:
-                        current = current.setdefault(rst[0], {})
-                        rst = rst[1:]
-                    current[lst] = value
-
-    def __repr__(self) -> str:
-        return repr({"prefix": self._prefix, "data": self._data})
-
-    def get(self, path: str, *paths: str, default: str = "") -> str:
-        try:
-            return self._get([path, *paths], default)
-        except Exception as exc:
-            key = "__".join([self._prefix, path, *paths]).upper()
-            raise KeyError(f"No {key} is defined") from exc
-
-    def _get(self, path: list[str], default: str = "") -> str:
-        current = self._data
-        for pth in path[:-1]:
-            current = current[pth]
-
-        rv = current.get(path[-1], default)
-        if not isinstance(rv, str):
-            raise KeyError("Umbigous path")
-
-        return rv
-
-    def __iter__(self) -> t.Iterator[tuple[str, ...]]:
-        def rec_iter(value: SettingsDictT) -> t.Iterator[list[str]]:
-            if isinstance(value, str):
-                yield ()
-            else:
-                yield from (
-                    [k, *subkey]
-                    for k, v in value.items()
-                    for subkey in rec_iter(v)
-                )
-
-        for elem in rec_iter(self._data):
-            yield tuple(elem)
+def parse(dct: collections.abc.Mapping[str, str]) -> EnvDict:
+    return {tuple(re.split("_{2,}", k.lower())): v for k, v in dct.items()}
