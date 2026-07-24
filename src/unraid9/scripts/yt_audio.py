@@ -183,6 +183,9 @@ def execute(
         "2",
         # Embed thumbnail in the video as cover art
         "--embed-thumbnail",
+        # AudioBookShelf requires an ISO 8601 date to emit an RSS pubDate.
+        "--parse-metadata",
+        "%(upload_date>%Y-%m-%d)s:meta_date",
         # Embed metadata to the video file. Also embeds
         # chapters/infojson if present unless
         # --no-embed-chapters/--no-embed-info-json are used
