@@ -25,6 +25,7 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+import textwrap
 import typing as t
 
 
@@ -39,6 +40,8 @@ def cmd_exec(
     *command: str | pathlib.Path, env: dict[str, str] | None = None
 ) -> list[str]:
     str_cmd = subprocess.list2cmdline(command)
+    str_cmd = textwrap.shorten(str_cmd, 70)
+
     env = env or {}
 
     proc = subprocess.run(
