@@ -135,6 +135,9 @@ def execute(
         date_after,
         # Use --break-match-filters
         "--break-on-reject",
+        # Reset break behavior for each URL in the batch file so an older
+        # video in one channel does not stop later channels from processing.
+        "--break-per-input",
         # Minimum download rate in bytes per second below which
         # throttling is assumed and the video data is re-extracted,
         # e.g. 100K
