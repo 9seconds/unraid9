@@ -405,13 +405,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "croniter", specifier = "~=6.2.4" },
-    { name = "validators", specifier = "~=0.35.0" },
-    { name = "yt-dlp", extras = ["pin", "pin-deno", "pin-curl-cffi", "pin-secretstorage"], specifier = "~=2026.7.4" },
+    { name = "croniter", specifier = "<7" },
+    { name = "validators", specifier = "<1" },
+    { name = "yt-dlp", extras = ["pin", "pin-deno", "pin-curl-cffi", "pin-secretstorage"] },
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "types-croniter", specifier = "~=6.2.4" }]
+dev = [{ name = "types-croniter", specifier = "<7" }]
 
 [[package]]
 name = "urllib3"

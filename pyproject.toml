@@ -15,16 +15,16 @@ authors = [
 
 dependencies = [
     # required by git-mirror
-    "croniter ~= 6.2.4",
-    "validators ~= 0.35.0",
+    "croniter < 7",
+    "validators < 1",
 
     # required by yt-audio
-    "yt-dlp[pin,pin-deno,pin-curl-cffi,pin-secretstorage] ~= 2026.7.4",
+    "yt-dlp[pin,pin-deno,pin-curl-cffi,pin-secretstorage]",
 ]
 
 [dependency-groups]
 dev = [
-  "types-croniter ~= 6.2.4"
+    "types-croniter < 7"
 ]
 
 [project.scripts]
