@@ -30,6 +30,8 @@ import tempfile
 import time
 import typing as t
 
+import validators
+
 from unraid9 import cli
 from unraid9 import cmd
 
@@ -74,6 +76,7 @@ def main(es: contextlib.ExitStack, settings: env.EnvDict) -> None:
     for group, value in settings.items():
         match group:
             case ["setting", "url", _]:
+                validators.url(value, r_ve=True)
                 urls.append(value)
 
     fd, urls_file = tempfile.mkstemp(text=True)
