@@ -37,6 +37,8 @@ RUN apt-get update && \
         tar && \
     rm -rf /var/lib/apt/lists/*
 
+COPY --from=ffmpeg /usr/bin/ffprobe /usr/bin/ffmpeg /usr/bin/
+
 COPY pyproject.toml uv.lock /
 RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
     uv export \
@@ -53,5 +55,3 @@ RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
     uv pip install --system --no-cache --no-deps . && \
     cd / && \
     rm -r /app
-
-COPY --from=ffmpeg /usr/bin/ffprobe /usr/bin/ffmpeg /usr/bin/
