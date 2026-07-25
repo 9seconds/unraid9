@@ -40,7 +40,7 @@ def cmd_exec(
     *command: str | pathlib.Path, env: dict[str, str] | None = None
 ) -> list[str]:
     str_cmd = subprocess.list2cmdline(command)
-    str_cmd = textwrap.shorten(str_cmd, 70)
+    str_cmd = textwrap.shorten(str_cmd, 79)
 
     env = env or {}
 
