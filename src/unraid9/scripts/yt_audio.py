@@ -183,7 +183,7 @@ def execute(
         # with -x. Insert a value between 0 (best) and 10 (worst) for
         # VBR or a specific bitrate like 128K (default 5)
         "--audio-quality",
-        "2",
+        "6",
         # Embed thumbnail in the video as cover art
         "--embed-thumbnail",
         # AudioBookShelf requires an ISO 8601 date to emit an RSS pubDate.
