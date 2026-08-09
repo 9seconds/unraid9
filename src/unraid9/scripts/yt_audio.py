@@ -167,6 +167,8 @@ def execute(
         work_dir / "cache",
         # Do not print progress bar
         "--no-progress",
+        # Do not print normal output; errors are still reported
+        "--quiet",
         # Video format code, see "FORMAT SELECTION" for more details
         "--format",
         "bestaudio",
