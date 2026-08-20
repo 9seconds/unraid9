@@ -185,7 +185,7 @@ def execute(
         # with -x. Insert a value between 0 (best) and 10 (worst) for
         # VBR or a specific bitrate like 128K (default 5)
         "--audio-quality",
-        "8",
+        "9",
         # Embed thumbnail in the video as cover art
         "--embed-thumbnail",
         # Preserve the upload time so AudioBookShelf can order same-day
