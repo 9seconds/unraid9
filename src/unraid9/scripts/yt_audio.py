@@ -118,13 +118,6 @@ def execute(
         # support only. Can be used multiple times
         "--color",
         "no_color",
-        # Client to impersonate for requests. E.g.
-        # chrome, chrome-110, chrome:windows-10.
-        # Pass --impersonate="" to impersonate any client.
-        # Note that forcing impersonation for all requests may have
-        # a detrimental impact on download speed and stability
-        "--impersonate",
-        "chrome",
         # Download only videos uploaded on or after this date.
         # The date formats accepted are the same as --date
         # The date can be "YYYYMMDD" or in the format
