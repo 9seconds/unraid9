@@ -31,6 +31,8 @@ FROM python:3-slim AS main
 
 RUN apt-get update && \
     apt-get install --yes --no-install-recommends \
+        build-essential \
+        gcc \
         git \
         gzip \
         openssh-client \
